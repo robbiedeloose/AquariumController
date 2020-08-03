@@ -6,6 +6,7 @@
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#define HOSTNAME "Aquarium-40"
 
 // If not using the Credentials.h file you can add credentials here
 #ifndef STASSID 
@@ -36,7 +37,7 @@ int waitRGB = duration * 1000 / 255 / 2;
 int waitWhite = duration * 1000 / 1024 / 2;
 boolean daylight = false;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+// TIME FUNCTIONS ///////////////////////////////////////////////////////////////////////////////////////////////
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 
@@ -68,7 +69,7 @@ boolean checkTime(const RtcDateTime& dt,int setHour, int setMinute){
   else return false;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////
+//RGB FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
 
 void sunrise() {
   Serial.println("Start Sunrise animation");
@@ -112,16 +113,15 @@ void sunset() {
 
 void setRGB() {
   Serial.println("Set strip to full spectrum");
-  for( int i = 0; i<22; i = i + 3 ) {
+  for( int i = 0 ; i < NUMPIXELS ; i = i + 3 ) {
     pixels.setPixelColor( i, 255, 0, 0 );
   }
-   for( int i = 1; i<22; i = i + 3 ) {
+   for( int i = 1 ; i < NUMPIXELS ; i = i + 3 ) {
     pixels.setPixelColor( i, 0, 255, 0 );
   }
-   for( int i = 2; i<22; i = i + 3 ) {
+   for( int i = 2 ; i < NUMPIXELS ; i = i + 3 ) {
     pixels.setPixelColor( i, 0, 0, 255 );
   }
-  //pixels.setPixelColor(0,255,0,0);
   pixels.show();
 }
 
@@ -146,8 +146,9 @@ void setup() {
   // ArduinoOTA.setPort(8266);
 
   // Hostname defaults to esp8266-[ChipID]
-  // ArduinoOTA.setHostname("myesp8266");
-
+	#ifdef HOSTNAME 
+	ArduinoOTA.setHostname(HOSTNAME);
+	#endif
   // No authentication by default
   // ArduinoOTA.setPassword("admin");
 
@@ -191,10 +192,11 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   
-  // Led strips ////////////////////////////////////
+  // Led strips //
   pinMode(12, OUTPUT);
   pixels.begin();
 
+  // Setup RTC //
   Serial.print("compiled: ");
   Serial.print(__DATE__);
   Serial.println(__TIME__);
@@ -204,52 +206,43 @@ void setup() {
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
 
-  //Setup RTC
+
   if (!Rtc.IsDateTimeValid()) 
   {
       if (Rtc.LastError() != 0)
       {
-          // we have a communications error
-          // see https://www.arduino.cc/en/Reference/WireEndTransmission for 
-          // what the number means
-          Serial.print("RTC communications error = ");
-          Serial.println(Rtc.LastError());
+		// we have a communications error
+		// see https://www.arduino.cc/en/Reference/WireEndTransmission for 
+		// what the number means
+		Serial.print("RTC communications error = ");
+		Serial.println(Rtc.LastError());
       }
       else
-      {
-          // Common Causes:
-          //    1) first time you ran and the device wasn't running yet
-          //    2) the battery on the device is low or even missing
-
-          Serial.println("RTC lost confidence in the DateTime!");
-
-          // following line sets the RTC to the date & time this sketch was compiled
-          // it will also reset the valid flag internally unless the Rtc device is
-          // having an issue
-
-          Rtc.SetDateTime(compiled);
+      {   
+        Serial.println("RTC lost confidence in the DateTime!");
+        Rtc.SetDateTime(compiled);
       }
   }
 
   if (!Rtc.GetIsRunning())
   {
-      Serial.println("RTC was not actively running, starting now");
-      Rtc.SetIsRunning(true);
+    Serial.println("RTC was not actively running, starting now");
+    Rtc.SetIsRunning(true);
   }
 
   RtcDateTime now = Rtc.GetDateTime();
   if (now < compiled) 
   {
-      Serial.println("RTC is older than compile time!  (Updating DateTime)");
-      Rtc.SetDateTime(compiled);
+    Serial.println("RTC is older than compile time!  (Updating DateTime)");
+     Rtc.SetDateTime(compiled);
   }
   else if (now > compiled) 
   {
-      Serial.println("RTC is newer than compile time. (this is expected)");
+    Serial.println("RTC is newer than compile time. (this is expected)");
   }
   else if (now == compiled) 
   {
-      Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+    Serial.println("RTC is the same as compile time! (not expected but all is fine)");
   }
 
   // never assume the Rtc was last configured by you, so
@@ -258,19 +251,27 @@ void setup() {
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone); 
 
   ////////////////////////
-  // check if light should be on after a reboot
-  Serial.println(waitRGB);
-  Serial.println(waitWhite);
+  // check if light should be on at startup
+	int minutesSinceMidnight = now.Hour() * 60 + now.Minute();
+	int minutesOn = sunriseHour * 60 + sunriseMinute;
+	int minutesOff = sunsetHour * 60 + sunsetMinute;
+
+	if (minutesSinceMidnight > minutesOn) {
+		 daylight = true;
+		 if (minutesSinceMidnight > minutesOff) {
+			 daylight = false;
+		 }
+	}
+	else {
+		daylight = false;
+	}	
+	if (daylight) {
+		sunrise();
+  	setRGB();
+	}
+
   
-
-  daylight = 1;
-  sunrise();
-  setRGB();
 }
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
   ArduinoOTA.handle();
