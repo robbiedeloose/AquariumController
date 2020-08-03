@@ -7,7 +7,8 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
-#ifndef STASSID
+// If not using the Credentials.h file you can add credentials here
+#ifndef STASSID 
 #define STASSID "ssid"
 #define STAPSK  "passkey"
 #endif
@@ -20,7 +21,6 @@ const char* password = STAPSK;
 #define NEOPIN 14
 #define NUMPIXELS 22
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIN, NEO_GRB + NEO_KHZ800);
-#define DELAYVAL 500 
 
 // RTC
 #include <Wire.h> // must be included here so that Arduino library object file references work
@@ -31,6 +31,9 @@ int sunriseHour = 9;
 int sunriseMinute = 0;
 int sunsetHour = 21;
 int sunsetMinute = 0;
+int duration = 10; // in seconds
+int waitRGB = duration * 1000 / 255 / 2;
+int waitWhite = duration * 1000 / 1024 / 2;
 boolean daylight = false;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,52 +71,57 @@ boolean checkTime(const RtcDateTime& dt,int setHour, int setMinute){
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 void sunrise() {
+  Serial.println("Start Sunrise animation");
   for(int i = 0 ; i<255;i++){
     pixels.fill(pixels.Color(i,0,0),0, 22);
     pixels.show(); 
-    delay(20);
+    delay(waitRGB);
   }
   for(int i = 0; i<1024;i++){
     analogWrite(12, i);
-    delay(20);
+    delay(waitWhite);
     //Serial.println(i);
   }
      for(int i = 255 ; i>=0 ; i--){
     pixels.fill(pixels.Color(i,0,0),0, 22);
     pixels.show(); 
-    delay(20);
+    delay(waitRGB);
   }
-  pixels.show();
+  Serial.println("Stop Sunrise animation");
 }
 
 void sunset() {
+  Serial.println("Start Sunset animation");
   for( int i = 0 ; i<255;i++ ){
     pixels.fill(pixels.Color(i,0,0),0, 22);
     pixels.show(); 
-    delay(20);
+    delay(waitRGB);
   }
   for( int i = 1024; i>=0;i-- ){
     analogWrite(12, i);
-    delay(20);
+    delay(waitWhite);
     //Serial.println(i);
   }
    for( int i = 255 ; i>=0 ; i-- ){
     pixels.fill(pixels.Color(i,0,0),0, 22);
     pixels.show(); 
-    delay(20);
+    delay(waitRGB);
   }
+  Serial.println("Stop Sunset animation");
 }
 
 void setRGB() {
-  for( int i = 0; i>22; i = i + 3 ) {
+  Serial.println("Set strip to full spectrum");
+  for( int i = 0; i<22; i = i + 3 ) {
     pixels.setPixelColor( i, 255, 0, 0 );
   }
-   for( int i = 1; i>22; i = i + 3 ) {
+   for( int i = 1; i<22; i = i + 3 ) {
     pixels.setPixelColor( i, 0, 255, 0 );
   }
-   for( int i = 2; i>22; i = i + 3 ) {
+   for( int i = 2; i<22; i = i + 3 ) {
     pixels.setPixelColor( i, 0, 0, 255 );
   }
+  //pixels.setPixelColor(0,255,0,0);
   pixels.show();
 }
 
@@ -251,6 +259,10 @@ void setup() {
 
   ////////////////////////
   // check if light should be on after a reboot
+  Serial.println(waitRGB);
+  Serial.println(waitWhite);
+  
+
   daylight = 1;
   sunrise();
   setRGB();
