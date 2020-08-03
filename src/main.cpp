@@ -27,15 +27,22 @@ Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIN, NEO_GRB + NEO_KHZ800);
 #include <Wire.h> // must be included here so that Arduino library object file references work
 #include <RtcDS3231.h>
 RtcDS3231<TwoWire> Rtc(Wire);
-
 int sunriseHour = 9;
 int sunriseMinute = 0;
 int sunsetHour = 21;
 int sunsetMinute = 0;
-int duration = 10; // in seconds
-int waitRGB = duration * 1000 / 255 / 2;
-int waitWhite = duration * 1000 / 1024 / 2;
+int duration = 1; // in minutes
+int waitRGB = duration * 60 * 1000 / 255 / 2;
+int waitWhite = duration * 60 * 1000 / 1024 / 2;
 boolean daylight = false;
+
+// Millis
+int period = 10000;
+unsigned long time_now = 0;
+
+// EEPROM
+#include <EEPROM.h>
+
 
 // TIME FUNCTIONS ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -67,6 +74,34 @@ boolean checkTime(const RtcDateTime& dt,int setHour, int setMinute){
     else return false;
   }
   else return false;
+}
+
+//EEPROM FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
+void startEEPRom () {
+	  EEPROM.begin(512);
+		int EEPRomIsSet = EEPROM.read(0);
+		if ( EEPRomIsSet == 1 ) {
+			Serial.println("Alarm time is allready set in EEPROM. I found the following data:");
+			sunriseHour = EEPROM.read(1);
+			sunriseMinute = EEPROM.read(2);
+			sunsetHour = EEPROM.read(3);
+			sunsetMinute = EEPROM.read(4);
+			duration = EEPROM.read(5);
+			Serial.printf ("Sunrise: %02d:%02d, sunset: %02d:%02d, Duration: %d minutes", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
+			Serial.println();
+		} else {
+			Serial.println("No Alarm time is EEPROM, saving default alarm times. Using following data:");
+			EEPROM.write(0, 1);
+			EEPROM.write(1, sunriseHour);
+			EEPROM.write(2, sunriseMinute);
+			EEPROM.write(3, sunsetHour);
+			EEPROM.write(4, sunsetMinute);
+			EEPROM.write(5, duration);
+			EEPROM.commit();
+			EEPROM.end();
+			Serial.printf ("Sunrise: %02d:%02d, sunset: %02d:%02d, Duration: %d minutes", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
+			Serial.println();
+		}
 }
 
 //RGB FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
@@ -101,7 +136,6 @@ void sunset() {
   for( int i = 1024; i>=0;i-- ){
     analogWrite(12, i);
     delay(waitWhite);
-    //Serial.println(i);
   }
    for( int i = 255 ; i>=0 ; i-- ){
     pixels.fill(pixels.Color(i,0,0),0, 22);
@@ -111,8 +145,8 @@ void sunset() {
   Serial.println("Stop Sunset animation");
 }
 
-void setRGB() {
-  Serial.println("Set strip to full spectrum");
+void setRGB1() {
+  Serial.println("Set strip to full spectrum v1");
   for( int i = 0 ; i < NUMPIXELS ; i = i + 3 ) {
     pixels.setPixelColor( i, 255, 0, 0 );
   }
@@ -130,7 +164,7 @@ void setRGB() {
 void setup() {
   Serial.begin(115200);
   while (!Serial); // wait for serial port to connect. Needed for native USB on ESP8266
-  delay(1000);
+  delay(5000);
   Serial.println("Serial started");
 
   // WIFI
@@ -250,6 +284,8 @@ void setup() {
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone); 
 
+	startEEPRom();
+
   ////////////////////////
   // check if light should be on at startup
 	int minutesSinceMidnight = now.Hour() * 60 + now.Minute();
@@ -267,7 +303,7 @@ void setup() {
 	}	
 	if (daylight) {
 		sunrise();
-  	setRGB();
+  	setRGB1();
 	}
 
   
@@ -275,13 +311,11 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
-  // put your main code here, to run repeatedly:
-  //sunrise();
-  //delay(10000);
-  //analogWrite(12, 0);
-  //pixels.clear();
-  /////////////////////////////////
-  if (!Rtc.IsDateTimeValid()) 
+
+  if (millis() > time_now + period) {
+		time_now = millis();
+		
+		if (!Rtc.IsDateTimeValid()) 
     {
         if (Rtc.LastError() != 0)
         {
@@ -313,7 +347,7 @@ void loop() {
     if (checkTime(now, sunriseHour, sunriseMinute)) {
       daylight = 1;
       sunrise();
-      setRGB();
+      setRGB1();
     }
     if (checkTime(now, sunsetHour, sunsetMinute)) {
       daylight = 0;
@@ -321,5 +355,5 @@ void loop() {
     }
     Serial.print("Daylight: ");
     Serial.println(daylight);
-    delay(10000); // ten seconds
+	}
 }
