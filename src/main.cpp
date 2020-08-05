@@ -201,8 +201,7 @@ void reconnect() {
       client.publish("outTopic", "hello world");
       // ... and resubscribe
       Serial.println("subscribe");
-      client.subscribe("homie/aquarium999/led");
-      client.subscribe("homie/aquarium999/color");
+      client.subscribe("homie/aquarium999/#");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -255,13 +254,40 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   //Serial.println(buf);
 
-  if(strcmp(topic, "homie/aquarium999/led") == 0){
+  if(strcmp(topic, "homie/aquarium999/light") == 0){
     int payloadAsInt = atoi ((char*)payload);
-    Serial.println("Topic1");
+    switch (payloadAsInt) {
+      case 0:
+        analogWrite(12, 0);
+        Serial.println("Main light Off");
+        break;
+      case 1:
+        analogWrite(12, 1023);
+        Serial.println("Main light On");
+        break;
+      default:
+        // statements
+        break;
+    }
   } 
-  else if (strcmp(topic, "homie/aquarium999/color") == 0) {
-    Serial.println("Topic2");
-  
+  else if(strcmp(topic, "homie/aquarium999/rgb") == 0){
+    int payloadAsInt = atoi ((char*)payload);
+    switch (payloadAsInt) {
+      case 0:
+        Serial.println("RGB Off");
+        break;
+      case 1:
+        Serial.println("RGB set 1");
+        break;
+      case 2:
+        Serial.println("RGB set 2");
+        break;
+      default:
+        // statements
+        break;
+    }
+  }
+  else if (strcmp(topic, "homie/aquarium999/sunrise") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
 
     strtokIndx = strtok((char*)payload,":");      // get the first part
@@ -270,9 +296,42 @@ void callback(char* topic, byte* payload, unsigned int length) {
     strtokIndx = strtok(NULL, ":"); // this continues where the previous call left off
     sunriseMinute = atoi(strtokIndx);     
 
-    Serial.printf ("Sunrise: %02d:%02d", sunriseHour, sunriseMinute);
+    EEPROM.begin(512);
+    EEPROM.write(1, sunriseHour);
+		EEPROM.write(2, sunriseMinute);
+		EEPROM.commit();
+		EEPROM.end();
+
+    Serial.printf ("New sunrise time: %02d:%02d", sunriseHour, sunriseMinute);
 		Serial.println();  
-  
+  }
+  else if (strcmp(topic, "homie/aquarium999/sunset") == 0) {
+    char * strtokIndx; // this is used by strtok() as an index
+
+    strtokIndx = strtok((char*)payload,":");      // get the first part
+    sunsetHour = atoi(strtokIndx); 
+ 
+    strtokIndx = strtok(NULL, ":"); // this continues where the previous call left off
+    sunsetMinute = atoi(strtokIndx);     
+
+    EEPROM.begin(512);
+    EEPROM.write(3, sunsetHour);
+		EEPROM.write(4, sunsetMinute);
+		EEPROM.commit();
+		EEPROM.end();
+
+    Serial.printf ("New sunset time: %02d:%02d", sunriseHour, sunriseMinute);
+		Serial.println();  
+  }
+  else if (strcmp(topic, "homie/aquarium999/duration") == 0) {
+    duration = atoi ((char*)payload);
+    EEPROM.begin(512);
+    EEPROM.write(5, duration);
+		EEPROM.commit();
+		EEPROM.end();
+
+    Serial.printf ("New duration time: %d", duration);
+		Serial.println();  
   }
 
 }
