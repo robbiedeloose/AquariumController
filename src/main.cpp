@@ -259,8 +259,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
     int payloadAsInt = atoi ((char*)payload);
     Serial.println("Topic1");
   } 
-  else if (strcmp(topic, "aquarium/aquarium999/color") == 0) {
+  else if (strcmp(topic, "homie/aquarium999/color") == 0) {
     Serial.println("Topic2");
+  
+    char * strtokIndx; // this is used by strtok() as an index
+
+    strtokIndx = strtok((char*)payload,":");      // get the first part
+    sunriseHour = atoi(strtokIndx); 
+ 
+    strtokIndx = strtok(NULL, ":"); // this continues where the previous call left off
+    sunriseMinute = atoi(strtokIndx);     
+
+    Serial.printf ("Sunrise: %02d:%02d", sunriseHour, sunriseMinute);
+		Serial.println();  
+  
   }
 
 }
