@@ -7,7 +7,7 @@
 #include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include <ArduinoOTA.h>
-#define HOSTNAME "Aquarium-70"
+#define HOSTNAME "Aquarium-999"
 
 // If not using the Credentials.h file you can add credentials here
 #ifndef STASSID 
@@ -170,6 +170,11 @@ void sunset() {
   Serial.println("Stop Sunset animation");
 }
 
+void clearRGB() {
+  pixels.clear();
+  pixels.show();
+}
+
 void setRGB1() {
   Serial.println("Set strip to full spectrum v1");
   for( int i = 0 ; i < NUMPIXELS ; i = i + 3 ) {
@@ -275,9 +280,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     switch (payloadAsInt) {
       case 0:
         Serial.println("RGB Off");
+        clearRGB();
         break;
       case 1:
         Serial.println("RGB set 1");
+        setRGB1();
         break;
       case 2:
         Serial.println("RGB set 2");
