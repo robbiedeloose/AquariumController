@@ -7,7 +7,7 @@
 #include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include <ArduinoOTA.h>
-#define HOSTNAME "Aquarium-999"
+#define HOSTNAME "aquarium999"
 
 // If not using the Credentials.h file you can add credentials here
 #ifndef STASSID 
@@ -257,24 +257,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   buf[length] = '\0';
   Serial.println();
-  //Serial.println(buf);
 
+  // Overwrite main light over mqtt
   if(strcmp(topic, "homie/aquarium999/light") == 0){
     int payloadAsInt = atoi ((char*)payload);
-    switch (payloadAsInt) {
-      case 0:
-        analogWrite(12, 0);
-        Serial.println("Main light Off");
-        break;
-      case 1:
-        analogWrite(12, 1023);
-        Serial.println("Main light On");
-        break;
-      default:
-        // statements
-        break;
-    }
+    analogWrite(12, map(payloadAsInt, 0, 100, 0, 1023 ));
+    Serial.printf ("Main light at %d percent", payloadAsInt);
   } 
+  // Overwrite RGB light over mqtt
   else if(strcmp(topic, "homie/aquarium999/rgb") == 0){
     int payloadAsInt = atoi ((char*)payload);
     switch (payloadAsInt) {
@@ -294,13 +284,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
         break;
     }
   }
+  // set new sunrise time over mqtt
   else if (strcmp(topic, "homie/aquarium999/sunrise") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
 
-    strtokIndx = strtok((char*)payload,":");      // get the first part
+    strtokIndx = strtok((char*)payload,":");
     sunriseHour = atoi(strtokIndx); 
- 
-    strtokIndx = strtok(NULL, ":"); // this continues where the previous call left off
+
+    strtokIndx = strtok(NULL, ":");
     sunriseMinute = atoi(strtokIndx);     
 
     EEPROM.begin(512);
@@ -312,13 +303,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.printf ("New sunrise time: %02d:%02d", sunriseHour, sunriseMinute);
 		Serial.println();  
   }
+  // set new sunset time over mqtt
   else if (strcmp(topic, "homie/aquarium999/sunset") == 0) {
-    char * strtokIndx; // this is used by strtok() as an index
+    char * strtokIndx; 
 
-    strtokIndx = strtok((char*)payload,":");      // get the first part
+    strtokIndx = strtok((char*)payload,":");  
     sunsetHour = atoi(strtokIndx); 
- 
-    strtokIndx = strtok(NULL, ":"); // this continues where the previous call left off
+    strtokIndx = strtok(NULL, ":");
     sunsetMinute = atoi(strtokIndx);     
 
     EEPROM.begin(512);
@@ -330,15 +321,22 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.printf ("New sunset time: %02d:%02d", sunriseHour, sunriseMinute);
 		Serial.println();  
   }
+  // Set new sunrise and sunset duration
   else if (strcmp(topic, "homie/aquarium999/duration") == 0) {
     duration = atoi ((char*)payload);
+
     EEPROM.begin(512);
     EEPROM.write(5, duration);
 		EEPROM.commit();
 		EEPROM.end();
-
     Serial.printf ("New duration time: %d", duration);
 		Serial.println();  
+  } 
+  // Request Ip from this controller
+  else if(strcmp(topic, "homie/aquarium999/requestip") == 0){
+    char tempBuffer[20] = "";
+    sprintf(tempBuffer, "IP: %s\n", WiFi.localIP().toString().c_str());
+    client.publish("homie/aquarium999/ip", tempBuffer);
   }
 
 }
