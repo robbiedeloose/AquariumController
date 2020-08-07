@@ -7,7 +7,7 @@
 #include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include <ArduinoOTA.h>
-#define HOSTNAME "aquarium999"
+#define HOSTNAME "aquarium40"
 
 // If not using the Credentials.h file you can add credentials here
 #ifndef STASSID 
@@ -41,11 +41,11 @@ int sunriseHour = 9;
 int sunriseMinute = 0;
 int sunsetHour = 21;
 int sunsetMinute = 0;
-int duration = 1; // in minutes
+int duration = 15; // in minutes
 int waitRGB = duration * 60 * 1000 / 255 / 2;
 int waitWhite = duration * 60 * 1000 / 1024 / 2;
 boolean daylight = false;
-boolean EEPRomOverwrite = true;
+boolean EEPRomOverwrite = false;
 
 // Millis
 int period = 10000;
@@ -206,7 +206,7 @@ void reconnect() {
       client.publish("outTopic", "hello world");
       // ... and resubscribe
       Serial.println("subscribe");
-      client.subscribe("homie/aquarium999/#");
+      client.subscribe("homie/aquarium40/#");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -242,9 +242,19 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-
-
 // MQTT FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
+
+void mqttSendInfo () {
+  char tempBuffer[100] = "";
+    sprintf(tempBuffer, "IP: %s\n", WiFi.localIP().toString().c_str());
+    client.publish("homie/aquarium40/info", tempBuffer);
+    sprintf(tempBuffer, "Suntrise: %02d:%02d\n", sunriseHour, sunriseMinute);
+    client.publish("homie/aquarium40/info", tempBuffer);
+    sprintf(tempBuffer, "Suntset: %02d:%02d\n", sunsetHour, sunsetMinute);
+    client.publish("homie/aquarium40/info", tempBuffer);
+    sprintf(tempBuffer, "duration: %02d\n", duration);
+    client.publish("homie/aquarium40/info", tempBuffer);
+}
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -259,13 +269,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
   // Overwrite main light over mqtt
-  if(strcmp(topic, "homie/aquarium999/light") == 0){
+  if(strcmp(topic, "homie/aquarium40/light") == 0){
     int payloadAsInt = atoi ((char*)payload);
     analogWrite(12, map(payloadAsInt, 0, 100, 0, 1023 ));
     Serial.printf ("Main light at %d percent", payloadAsInt);
   } 
   // Overwrite RGB light over mqtt
-  else if(strcmp(topic, "homie/aquarium999/rgb") == 0){
+  else if(strcmp(topic, "homie/aquarium40/rgb") == 0){
     int payloadAsInt = atoi ((char*)payload);
     switch (payloadAsInt) {
       case 0:
@@ -285,7 +295,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
   }
   // set new sunrise time over mqtt
-  else if (strcmp(topic, "homie/aquarium999/sunrise") == 0) {
+  else if (strcmp(topic, "homie/aquarium40/sunrise") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
 
     strtokIndx = strtok((char*)payload,":");
@@ -304,7 +314,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 		Serial.println();  
   }
   // set new sunset time over mqtt
-  else if (strcmp(topic, "homie/aquarium999/sunset") == 0) {
+  else if (strcmp(topic, "homie/aquarium40/sunset") == 0) {
     char * strtokIndx; 
 
     strtokIndx = strtok((char*)payload,":");  
@@ -322,7 +332,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 		Serial.println();  
   }
   // Set new sunrise and sunset duration
-  else if (strcmp(topic, "homie/aquarium999/duration") == 0) {
+  else if (strcmp(topic, "homie/aquarium40/duration") == 0) {
     duration = atoi ((char*)payload);
 
     EEPROM.begin(512);
@@ -333,12 +343,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
 		Serial.println();  
   } 
   // Request Ip from this controller
-  else if(strcmp(topic, "homie/aquarium999/requestip") == 0){
+  else if(strcmp(topic, "homie/aquarium40/requestip") == 0){
     char tempBuffer[20] = "";
     sprintf(tempBuffer, "IP: %s\n", WiFi.localIP().toString().c_str());
-    client.publish("homie/aquarium999/ip", tempBuffer);
+    client.publish("homie/aquarium40/ip", tempBuffer);
   }
-
+  // Request Ip from this controller
+  else if(strcmp(topic, "homie/aquarium40/requestinfo") == 0){
+    mqttSendInfo();
+  }
+  // Simulate sunrise
+  else if(strcmp(topic, "homie/aquarium40/dosunrise") == 0){
+    sunrise();
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -489,8 +506,8 @@ void setup() {
 		daylight = false;
 	}	
 	if (daylight) {
-		//sunrise();
-  	//setRGB1();
+		sunrise();
+  	setRGB1();
 	}
 
   
