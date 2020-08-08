@@ -30,7 +30,7 @@ int value = 0;
 // Neopixel
 #include <Adafruit_NeoPixel.h>
 #define NEOPIN 14
-#define NUMPIXELS 22
+#define NUMPIXELS 14  //40L: 14, 70L 22 
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIN, NEO_GRB + NEO_KHZ800);
 
 // RTC
@@ -44,6 +44,10 @@ int sunsetMinute = 0;
 int duration = 15; // in minutes
 int waitRGB = duration * 60 * 1000 / 255 / 2;
 int waitWhite = duration * 60 * 1000 / 1024 / 2;
+
+int moonBrightness = 150;
+int moonNumberofleds = 4;
+
 boolean daylight = false;
 boolean EEPRomOverwrite = false;
 
@@ -189,6 +193,36 @@ void setRGB1() {
   pixels.show();
 }
 
+void setMoon1() {
+  for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
+      pixels.setPixelColor( i, 0, 0, 100 );
+   }  
+   pixels.show();
+}
+
+void setMoon2() {
+  for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
+    pixels.setPixelColor( i, 0, 0, 100 );
+   }  
+   for( int i = 3 ; i < NUMPIXELS ; i = i + 6 ) {
+    pixels.setPixelColor( i, 20, 20, 20 );
+   }  
+   pixels.show();
+}
+
+void moonrise (){
+  for(size_t j = 0; j < moonBrightness ; j++){
+    for( int i = 2 ; i < NUMPIXELS ; i = i + 3 ) {
+      pixels.setPixelColor( i, 0, 0, j );
+    }  
+    pixels.show();
+  }
+} 
+
+void moonset (){
+
+}
+
 // WIFI FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
 void reconnect() {
@@ -293,7 +327,31 @@ void callback(char* topic, byte* payload, unsigned int length) {
         // statements
         break;
     }
-  }
+  } 
+  // show moonlight over mqtt
+  else if(strcmp(topic, "homie/aquarium40/moonlight") == 0){
+    int payloadAsInt = atoi ((char*)payload);
+    switch (payloadAsInt) {
+      case 0:
+        Serial.println("Moonlight Off");
+		client.publish("homie/aquarium40/info","Moon off");
+        clearRGB();
+        break;
+      case 1:
+        Serial.println("Moon 1");
+		client.publish("homie/aquarium40/info","Moon 1 set");
+        setMoon1();
+        break;
+      case 2:
+        Serial.println("Moon 2");
+		client.publish("homie/aquarium40/info","Moon 2 set");
+        setMoon2();
+        break;
+      default:
+        // statements
+        break;
+    }
+  } 
   // set new sunrise time over mqtt
   else if (strcmp(topic, "homie/aquarium40/sunrise") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
