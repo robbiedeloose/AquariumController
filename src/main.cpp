@@ -194,6 +194,7 @@ void setRGB1() {
 }
 
 void setMoon1() {
+	pixels.clear();
   for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
       pixels.setPixelColor( i, 0, 0, 100 );
    }  
@@ -201,12 +202,20 @@ void setMoon1() {
 }
 
 void setMoon2() {
-  for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
-    pixels.setPixelColor( i, 0, 0, 100 );
-   }  
-   for( int i = 3 ; i < NUMPIXELS ; i = i + 6 ) {
-    pixels.setPixelColor( i, 20, 20, 20 );
-   }  
+	pixels.clear();
+  	for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
+    	pixels.setPixelColor( i, 0, 0, 100 );
+   	}  
+   	for( int i = 3 ; i < NUMPIXELS ; i = i + 6 ) {
+    	pixels.setPixelColor( i, 20, 20, 20 );
+   	}  
+   	pixels.show();
+}
+
+void setMoon3() {
+	pixels.clear();
+    pixels.setPixelColor( 13, 0, 0, 100 );
+    pixels.setPixelColor( 14, 20, 20, 20 );
    pixels.show();
 }
 
@@ -346,6 +355,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
         Serial.println("Moon 2");
 		client.publish("homie/aquarium40/info","Moon 2 set");
         setMoon2();
+        break;
+      case 3:
+        Serial.println("Moon 2");
+		client.publish("homie/aquarium40/info","Moon 2 set");
+        setMoon3();
         break;
       default:
         // statements
