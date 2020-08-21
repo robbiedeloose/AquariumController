@@ -42,6 +42,10 @@ int sunriseHour = 9;
 int sunriseMinute = 0;
 int sunsetHour = 21;
 int sunsetMinute = 0;
+int moonStartHour = 22;
+int moonStartMinute = 0;
+int moonStopHour = 2;
+int moonStopMinute = 0;
 int duration = 15; // in minutes
 int waitRGB = duration * 60 * 1000 / 255 / 2;
 int waitWhite = duration * 60 * 1000 / 1024 / 2;
@@ -59,7 +63,61 @@ unsigned long time_now = 0;
 // EEPROM
 #include <EEPROM.h>
 
+// Display
+#include <Adafruit_I2CDevice.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define NUMFLAKES     10 // Number of snowflakes in the animation example
+
+#define LOGO_HEIGHT   16
+#define LOGO_WIDTH    16
+static const unsigned char PROGMEM logo_bmp[] =
+{ B00000000, B11000000,
+  B00000001, B11000000,
+  B00000001, B11000000,
+  B00000011, B11100000,
+  B11110011, B11100000,
+  B11111110, B11111000,
+  B01111110, B11111111,
+  B00110011, B10011111,
+  B00011111, B11111100,
+  B00001101, B01110000,
+  B00011011, B10100000,
+  B00111111, B11100000,
+  B00111111, B11110000,
+  B01111100, B11110000,
+  B01110000, B01110000,
+  B00000000, B00110000 };
+
+static const unsigned char PROGMEM signal4_icon16x16[] =
+{
+	0b00000000, 0b00000000, //                 
+	0b00000000, 0b00000100, //              #  
+	0b00000000, 0b00001100, //             ##  
+	0b00000000, 0b00011100, //            ###  
+	0b00000000, 0b00011100, //            ###  
+	0b00000000, 0b01011100, //          # ###  
+	0b00000000, 0b11011100, //         ## ###  
+	0b00000001, 0b11011100, //        ### ###  
+	0b00000001, 0b11011100, //        ### ###  
+	0b00000101, 0b11011100, //      # ### ###  
+	0b00001101, 0b11011100, //     ## ### ###  
+	0b00011101, 0b11011100, //    ### ### ###  
+	0b00011101, 0b11011100, //    ### ### ###  
+	0b01011101, 0b11011100, //  # ### ### ###  
+	0b11011101, 0b11011100, // ## ### ### ###  
+	0b11011101, 0b11011100, // ## ### ### ###  
+};
+
+// DISPLAY FUNCTIONS
+	
 // TIME FUNCTIONS ///////////////////////////////////////////////////////////////////////////////////////////////
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
@@ -239,7 +297,7 @@ void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
+    // Create a random client ID 
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
@@ -263,7 +321,6 @@ void reconnect() {
 }
 
 void setup_wifi() {
-
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
@@ -456,6 +513,31 @@ void setup() {
   while (!Serial); // wait for serial port to connect. Needed for native USB on ESP8266
   delay(5000);
   Serial.println("Serial started");
+
+  // OLED
+  // start display
+	// SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+  // Show initial display buffer contents on the screen --
+  // the library initializes this with an Adafruit splash screen.
+  display.display();
+  delay(2000); // Pause for 2 seconds
+
+  // Clear the buffer
+  display.clearDisplay();
+
+  // Draw a single pixel in white
+  display.drawPixel(10, 10, SSD1306_WHITE);
+
+  // Show the display buffer on the screen. You MUST call display() after
+  // drawing commands to make them visible on screen!
+  display.display();
+  delay(2000);
+
 
   // WIFI
   setup_wifi();
