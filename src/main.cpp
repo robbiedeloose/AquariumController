@@ -70,6 +70,8 @@ unsigned long time_now = 0;
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Fonts/FreeMono12pt7b.h>
+#include <Fonts/FreeMono9pt7b.h>
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
@@ -382,9 +384,6 @@ void setup_wifi() {
       display.display(); 
 			return;
 		}
-  display.println("");
-  display.println("Connected!");
-  display.display(); 
   }
 
   randomSeed(micros());
@@ -797,11 +796,47 @@ void loop() {
 
     switch (screenNumber) {
       case 1:
-				// display screen 1
+        // TEMPERATURE
 				display.clearDisplay();
-				display.setCursor(0,10);
-        display.setTextSize(1);
-        display.println(WiFi.localIP());
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Temperature");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(2);
+        display.print("IN   ");
+				display.print(temp.AsFloatDegC(), 1);
+				display.println("C");
+        display.setCursor(0, 36);
+        display.setTextSize(2);
+        display.print("OUT  ");
+				display.print(temp.AsFloatDegC(), 1);
+				display.println("C");
+				display.display();
+        break;
+      case 2:
+        // AIR & CO2
+        display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Technics");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(2);
+				display.print("CO2: ");
+				display.println("on");
+				display.print("Air: ");
+				display.println("off");
+				display.display();
+        break;
+      case 3:
+        // NETWORK
+				display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Network");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
         display.setTextSize(2);
 				display.print("wifi: ");
 				if (noWifiMode){
@@ -810,6 +845,8 @@ void loop() {
 				else {
 					display.println("ok");
 				}
+        display.setCursor(0, 36);
+        display.setTextSize(2);
 				display.print("mqtt: ");
 				if (mqttServerConnected){
 					display.println("ok");
@@ -817,20 +854,50 @@ void loop() {
 				else {
 					display.println("--");
 				}
-				display.println();
+				display.setCursor(0, 57);
+        display.setTextSize(1);
+        display.print("ip: ");
+        display.println(WiFi.localIP());
 				display.display();
         break;
-      case 2:
-				display.clearDisplay();
-				display.setCursor(0,10);
+      case 4:
+        // AIR & CO2
+        display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Light");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(1);
+        char buffer[20];
+        printf(buffer, "%02d:%02d", sunriseHour, sunriseMinute);
+
+        display.println(buffer);
+				display.print("Sunrise:  ");
+				display.println("10:00");
+				display.print("Sunset:   ");
+				display.println("20:00");
+        display.print("Moonrise: ");
+				display.println("22:10");
+				display.print("Moonset:  ");
+				display.println("23:30");
+        display.println("Duration: 15 minutes");
+				display.display();
+        break;
+      case 5:
+        // AIR & CO2
+        display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Moon");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
 				display.setTextSize(2);
-				display.println("Temp ");
-				display.setTextSize(3);
-				display.print(temp.AsFloatDegC(), 1);
-				display.println("c");
+				display.print("On: ");
+				display.println("10:00");
+				display.print("Off: ");
+				display.println("20:00");
 				display.display();
-        break;
-      case 3:
         break;
       default:
         // statements
@@ -838,7 +905,7 @@ void loop() {
     }
 
 		screenNumber++;
-		if (screenNumber > 2) screenNumber = 1;
+		if (screenNumber > 4) screenNumber = 1;
 
 	//// Check sunrise and sunset 
     if (checkTime(now, sunriseHour, sunriseMinute)) {
