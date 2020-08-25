@@ -9,6 +9,8 @@
 #include <ArduinoOTA.h>
 #define HOSTNAME "aquarium40"
 
+#define VERSION 0.3
+
 // If not using the Credentials.h file you can add credentials here
 #ifndef STASSID 
 #define STASSID "ssid"
@@ -136,6 +138,23 @@ void printDateTime(const RtcDateTime& dt)
             dt.Minute(),
             dt.Second() );
     Serial.print(datestring);
+}
+
+void printDateToDisplay (const RtcDateTime& dt)
+{
+    char datestring[20];
+
+    snprintf_P(datestring, 
+            countof(datestring),
+            PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
+            dt.Month(),
+            dt.Day(),
+            dt.Year(),
+            dt.Hour(),
+            dt.Minute(),
+            dt.Second() );
+    display.println(datestring);
+    display.display();
 }
 
 boolean checkTime(const RtcDateTime& dt,int setHour, int setMinute){
@@ -293,28 +312,37 @@ void moonset (){
 
 // WIFI FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
+int mqttTimeOut = 0;
+
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Create a random client ID 
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      Serial.println("send wakeupmassege");
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
-      Serial.println("subscribe");
-      client.subscribe("homie/aquarium40/#");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+    if (mqttTimeOut < 10) {
+      Serial.print("Attempting MQTT connection...");
+      // Create a random client ID 
+      String clientId = "ESP8266Client-";
+      clientId += String(random(0xffff), HEX);
+      // Attempt to connect
+      if (client.connect(clientId.c_str())) {
+        Serial.println("connected");
+        // Once connected, publish an announcement...
+        Serial.println("send wakeupmassege");
+        client.publish("outTopic", "hello world");
+        // ... and resubscribe
+        Serial.println("subscribe");
+        client.subscribe("homie/aquarium40/#");
+      } else {
+        Serial.print("failed, rc=");
+        Serial.print(client.state());
+        Serial.println(" try again in 5 seconds");
+        // Wait 5 seconds before retrying
+        delay(1000);
+      }
+      mqttTimeOut++;
+    }
+    else{
+      Serial.println("Not connected to MQTT");
+      return;
     }
   }
     Serial.println("MQTT reconnect done");
@@ -327,6 +355,10 @@ void setup_wifi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
 
+  display.println("conencting to");
+  display.println(ssid);
+  display.display(); 
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
@@ -335,13 +367,20 @@ void setup_wifi() {
 		if (wifiTimeOut < 60){
 			delay(500);
 			Serial.print(".");
+      display.print(".");
+      display.display(); 
 			noWifiMode = false;
 			wifiTimeOut++;
 		}
 		else {
 			noWifiMode = true;
-			break;
+      display.println("not connected");
+      display.display(); 
+			return;
 		}
+  display.println("");
+  display.println("Connected!");
+  display.display(); 
   }
 
   randomSeed(micros());
@@ -519,7 +558,6 @@ void setup() {
 	// SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
     Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
   }
 
   // Show initial display buffer contents on the screen --
@@ -536,7 +574,13 @@ void setup() {
   // Show the display buffer on the screen. You MUST call display() after
   // drawing commands to make them visible on screen!
   display.display();
-  delay(2000);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 10);
+  // Display static text
+  display.println("Starting ");
+  display.display(); 
 
 
   // WIFI
@@ -602,8 +646,17 @@ void setup() {
 		ArduinoOTA.begin();
 		Serial.println("Ready");
 		Serial.print("IP address: ");
-		Serial.println(WiFi.localIP());
 	}	
+
+  //display ip address
+  Serial.println(WiFi.localIP());
+  display.println(WiFi.localIP());
+  display.display();
+  delay(10000); // display this info for 10 seconds
+  display.clearDisplay();
+  display.setCursor(0,10);
+  display.display();
+
   // Led strips //
   pinMode(12, OUTPUT);
   pixels.begin();
@@ -614,10 +667,11 @@ void setup() {
   Serial.println(__TIME__);
 
   Rtc.Begin();
+  display.println("Rtc starting:");
+  display.display();
 
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
-
 
   if (!Rtc.IsDateTimeValid()) 
   {
@@ -628,35 +682,55 @@ void setup() {
 		// what the number means
 		Serial.print("RTC communications error = ");
 		Serial.println(Rtc.LastError());
+    display.print("RTC communications error = ");
+    display.println(Rtc.LastError());
+    display.display();
       }
       else
       {   
         Serial.println("RTC lost confidence in the DateTime!");
         Rtc.SetDateTime(compiled);
+        display.println("RTC lost confidence in the DateTime!");
+        display.display();
       }
+      delay(5000);
   }
 
   if (!Rtc.GetIsRunning())
   {
     Serial.println("RTC was not actively running, starting now");
+    display.println("RTC lost confidence in the DateTime!");
+    display.display();
     Rtc.SetIsRunning(true);
+    delay(5000);
   }
 
   RtcDateTime now = Rtc.GetDateTime();
   if (now < compiled) 
   {
     Serial.println("RTC is older than compile time!  (Updating DateTime)");
-     Rtc.SetDateTime(compiled);
+    display.println("RTC lost confidence in the DateTime!");
+    display.display();
+    delay(5000);
+    Rtc.SetDateTime(compiled);
   }
   else if (now > compiled) 
   {
     Serial.println("RTC is newer than compile time. (this is expected)");
+    display.println("RTC is newer than compile time. (this is expected)");
+    display.display();
+    delay(5000);
   }
   else if (now == compiled) 
   {
     Serial.println("RTC is the same as compile time! (not expected but all is fine)");
   }
 
+  printDateToDisplay(now);
+  delay(5000);
+  display.clearDisplay();
+  display.setCursor(0,10);
+  display.display();
   // never assume the Rtc was last configured by you, so
   // just clear them to your needed state
   Rtc.Enable32kHzPin(false);
@@ -683,6 +757,7 @@ void setup() {
 		sunrise();
   	setRGB1();
 	}
+
 
   
 }
@@ -740,5 +815,15 @@ void loop() {
     }
     Serial.print("Daylight: ");
     Serial.println(daylight);
+
+    display.setCursor(0,10);
+    if (noWifiMode){
+      display.println("No Wifi");
+    }
+    else {
+      display.print("ip: ");
+      display.println(WiFi.localIP());
+    }
+    display.display();
 	}
 }
