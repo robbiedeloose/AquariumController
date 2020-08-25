@@ -22,6 +22,7 @@ const char* password = STAPSK;
 //const char* mqtt_server = "broker.mqtt-dashboard.com";
 IPAddress mqtt_server(192, 168, 10, 161);
 boolean noWifiMode = false;
+boolean mqttServerConnected = false;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -75,6 +76,7 @@ unsigned long time_now = 0;
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+int screenNumber = 2;
 
 #define NUMFLAKES     10 // Number of snowflakes in the animation example
 
@@ -312,10 +314,9 @@ void moonset (){
 
 // WIFI FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
-int mqttTimeOut = 0;
-
 void reconnect() {
   // Loop until we're reconnected
+	int mqttTimeOut = 0;
   while (!client.connected()) {
     if (mqttTimeOut < 10) {
       Serial.print("Attempting MQTT connection...");
@@ -327,10 +328,11 @@ void reconnect() {
         Serial.println("connected");
         // Once connected, publish an announcement...
         Serial.println("send wakeupmassege");
-        client.publish("outTopic", "hello world");
+        client.publish("homie/aquarium40", "reconnected");
         // ... and resubscribe
         Serial.println("subscribe");
         client.subscribe("homie/aquarium40/#");
+        mqttServerConnected = true;
       } else {
         Serial.print("failed, rc=");
         Serial.print(client.state());
@@ -342,10 +344,12 @@ void reconnect() {
     }
     else{
       Serial.println("Not connected to MQTT");
+      mqttServerConnected = false;
       return;
     }
   }
-    Serial.println("MQTT reconnect done");
+  Serial.println("MQTT reconnect done");
+	mqttServerConnected = true;
 }
 
 void setup_wifi() {
@@ -388,7 +392,7 @@ void setup_wifi() {
 	if (noWifiMode == false) {
 		Serial.println("");
   	Serial.println("WiFi connected");
-  	Serial.println("IP address: ");
+  	Serial.print("IP address: ");
   	Serial.println(WiFi.localIP());
 	}
 	else {
@@ -568,9 +572,6 @@ void setup() {
   // Clear the buffer
   display.clearDisplay();
 
-  // Draw a single pixel in white
-  display.drawPixel(10, 10, SSD1306_WHITE);
-
   // Show the display buffer on the screen. You MUST call display() after
   // drawing commands to make them visible on screen!
   display.display();
@@ -588,18 +589,6 @@ void setup() {
 	if (noWifiMode == false) {
 		client.setServer(mqtt_server, 1883);
 		client.setCallback(callback);
-
-		/*
-		WiFi.mode(WIFI_STA);
-		WiFi.begin(ssid, password);
-		while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-			Serial.println("Connection Failed! Rebooting...");
-			delay(5000);
-			ESP.restart();
-		}*/
-
-		// Port defaults to 8266
-		// ArduinoOTA.setPort(8266);
 
 		// Hostname defaults to esp8266-[ChipID]
 		#ifdef HOSTNAME 
@@ -652,7 +641,7 @@ void setup() {
   Serial.println(WiFi.localIP());
   display.println(WiFi.localIP());
   display.display();
-  delay(10000); // display this info for 10 seconds
+  delay(2000); // display this info for 10 seconds
   display.clearDisplay();
   display.setCursor(0,10);
   display.display();
@@ -693,7 +682,7 @@ void setup() {
         display.println("RTC lost confidence in the DateTime!");
         display.display();
       }
-      delay(5000);
+      delay(2000);
   }
 
   if (!Rtc.GetIsRunning())
@@ -702,7 +691,7 @@ void setup() {
     display.println("RTC lost confidence in the DateTime!");
     display.display();
     Rtc.SetIsRunning(true);
-    delay(5000);
+    delay(2000);
   }
 
   RtcDateTime now = Rtc.GetDateTime();
@@ -711,7 +700,7 @@ void setup() {
     Serial.println("RTC is older than compile time!  (Updating DateTime)");
     display.println("RTC lost confidence in the DateTime!");
     display.display();
-    delay(5000);
+    delay(2000);
     Rtc.SetDateTime(compiled);
   }
   else if (now > compiled) 
@@ -719,7 +708,7 @@ void setup() {
     Serial.println("RTC is newer than compile time. (this is expected)");
     display.println("RTC is newer than compile time. (this is expected)");
     display.display();
-    delay(5000);
+    delay(2000);
   }
   else if (now == compiled) 
   {
@@ -740,6 +729,7 @@ void setup() {
 
   ////////////////////////
   // check if light should be on at startup
+	/*
 	int minutesSinceMidnight = now.Hour() * 60 + now.Minute();
 	int minutesOn = sunriseHour * 60 + sunriseMinute;
 	int minutesOff = sunsetHour * 60 + sunsetMinute;
@@ -757,14 +747,14 @@ void setup() {
 		sunrise();
   	setRGB1();
 	}
-
+*/
 
   
 }
 
 void loop() {
   
-	if (noWifiMode = false) {
+	if (noWifiMode == false) {
 		if (!client.connected()) {
 			reconnect();
 		}
@@ -803,7 +793,54 @@ void loop() {
     // Serial.print(temp.AsFloatDegC());
     Serial.println("C");
 
-    //// Check sunrise and sunset 
+    // display stuff
+
+    switch (screenNumber) {
+      case 1:
+				// display screen 1
+				display.clearDisplay();
+				display.setCursor(0,10);
+        display.setTextSize(1);
+        display.println(WiFi.localIP());
+        display.setTextSize(2);
+				display.print("wifi: ");
+				if (noWifiMode){
+					display.println("--");
+				}
+				else {
+					display.println("ok");
+				}
+				display.print("mqtt: ");
+				if (mqttServerConnected){
+					display.println("ok");
+				}
+				else {
+					display.println("--");
+				}
+				display.println();
+				display.display();
+        break;
+      case 2:
+				display.clearDisplay();
+				display.setCursor(0,10);
+				display.setTextSize(2);
+				display.println("Temp ");
+				display.setTextSize(3);
+				display.print(temp.AsFloatDegC(), 1);
+				display.println("c");
+				display.display();
+        break;
+      case 3:
+        break;
+      default:
+        // statements
+        break;
+    }
+
+		screenNumber++;
+		if (screenNumber > 2) screenNumber = 1;
+
+	//// Check sunrise and sunset 
     if (checkTime(now, sunriseHour, sunriseMinute)) {
       daylight = 1;
       sunrise();
@@ -815,15 +852,6 @@ void loop() {
     }
     Serial.print("Daylight: ");
     Serial.println(daylight);
-
-    display.setCursor(0,10);
-    if (noWifiMode){
-      display.println("No Wifi");
-    }
-    else {
-      display.print("ip: ");
-      display.println(WiFi.localIP());
-    }
-    display.display();
-	}
+  
+  }
 }
