@@ -49,6 +49,10 @@ int moonStartHour = 22;
 int moonStartMinute = 0;
 int moonStopHour = 2;
 int moonStopMinute = 0;
+int airStartHour = 7;
+int airStartMinute = 0;
+int airStopHour = 19;
+int airStopMinute = 0;
 int duration = 15; // in minutes
 int waitRGB = duration * 60 * 1000 / 255 / 2;
 int waitWhite = duration * 60 * 1000 / 1024 / 2;
@@ -60,7 +64,7 @@ boolean daylight = false;
 boolean EEPRomOverwrite = false;
 
 // Millis
-int period = 10000;
+int period = 5000;
 unsigned long time_now = 0;
 
 // EEPROM
@@ -72,13 +76,13 @@ unsigned long time_now = 0;
 #include <Adafruit_SSD1306.h>
 #include <Fonts/FreeMono12pt7b.h>
 #include <Fonts/FreeMono9pt7b.h>
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-int screenNumber = 2;
+int screenNumber = 4;
 
 #define NUMFLAKES     10 // Number of snowflakes in the animation example
 
@@ -101,26 +105,6 @@ static const unsigned char PROGMEM logo_bmp[] =
   B01111100, B11110000,
   B01110000, B01110000,
   B00000000, B00110000 };
-
-static const unsigned char PROGMEM signal4_icon16x16[] =
-{
-	0b00000000, 0b00000000, //                 
-	0b00000000, 0b00000100, //              #  
-	0b00000000, 0b00001100, //             ##  
-	0b00000000, 0b00011100, //            ###  
-	0b00000000, 0b00011100, //            ###  
-	0b00000000, 0b01011100, //          # ###  
-	0b00000000, 0b11011100, //         ## ###  
-	0b00000001, 0b11011100, //        ### ###  
-	0b00000001, 0b11011100, //        ### ###  
-	0b00000101, 0b11011100, //      # ### ###  
-	0b00001101, 0b11011100, //     ## ### ###  
-	0b00011101, 0b11011100, //    ### ### ###  
-	0b00011101, 0b11011100, //    ### ### ###  
-	0b01011101, 0b11011100, //  # ### ### ###  
-	0b11011101, 0b11011100, // ## ### ### ###  
-	0b11011101, 0b11011100, // ## ### ### ###  
-};
 
 // DISPLAY FUNCTIONS
 	
@@ -173,47 +157,54 @@ boolean checkTime(const RtcDateTime& dt,int setHour, int setMinute){
   else return false;
 }
 
-//EEPROM FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
-void startEEPRom () {
-	  EEPROM.begin(512);
-		int EEPRomIsSet = EEPROM.read(0);
-		if (EEPRomOverwrite) {
-			Serial.println("Reset EEPROM, saving default alarm times. Using following data:");
-			EEPROM.write(0, 1);
+void writeValuesToEEPRom (){
+  		EEPROM.write(0, 1);
 			EEPROM.write(1, sunriseHour);
 			EEPROM.write(2, sunriseMinute);
 			EEPROM.write(3, sunsetHour);
 			EEPROM.write(4, sunsetMinute);
 			EEPROM.write(5, duration);
+      EEPROM.write(6, moonStartHour);
+      EEPROM.write(7, moonStartMinute);
+      EEPROM.write(8, moonStopHour);
+      EEPROM.write(9, moonStopMinute);
+      EEPROM.write(10, airStartHour);
+      EEPROM.write(11, airStartMinute);
+      EEPROM.write(12, airStopHour);
+      EEPROM.write(13, airStopMinute);
 			EEPROM.commit();
 			EEPROM.end();
-			Serial.printf ("Sunrise: %02d:%02d, sunset: %02d:%02d, Duration: %d minutes", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
-			Serial.println();
-		} 
-		else {
-			if ( EEPRomIsSet == 1 ) {
-				Serial.println("Alarm time is allready set in EEPROM. I found the following data:");
-				sunriseHour = EEPROM.read(1);
+}
+
+void readValuesFromEEPRom(){
+  			sunriseHour = EEPROM.read(1);
 				sunriseMinute = EEPROM.read(2);
 				sunsetHour = EEPROM.read(3);
 				sunsetMinute = EEPROM.read(4);
 				duration = EEPROM.read(5);
-				Serial.printf ("Sunrise: %02d:%02d, sunset: %02d:%02d, Duration: %d minutes", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
-				Serial.println();
-			} else {
-				Serial.println("No Alarm time is EEPROM, saving default alarm times. Using following data:");
-				EEPROM.write(0, 1);
-				EEPROM.write(1, sunriseHour);
-				EEPROM.write(2, sunriseMinute);
-				EEPROM.write(3, sunsetHour);
-				EEPROM.write(4, sunsetMinute);
-				EEPROM.write(5, duration);
-				EEPROM.commit();
-				EEPROM.end();
-				Serial.printf ("Sunrise: %02d:%02d, sunset: %02d:%02d, Duration: %d minutes", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
-				Serial.println();
-			}
-		}
+        moonStartHour = EEPROM.read(6);
+        moonStartMinute = EEPROM.read(7);
+        moonStopHour = EEPROM.read(8);
+        moonStopMinute = EEPROM.read(9);
+        airStartHour = EEPROM.read(10);
+        airStartMinute = EEPROM.read(11);
+        airStopHour = EEPROM.read(12);
+        airStopMinute = EEPROM.read(13);
+}
+
+//EEPROM FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
+void startEEPRom () {
+	  EEPROM.begin(512);
+		int EEPRomIsSet = EEPROM.read(0);
+    if ( EEPRomIsSet == 1 ) {
+      Serial.println("Alarm time is allready set in EEPROM. Found the following data:");
+      readValuesFromEEPRom();
+    } else {
+      Serial.println("No Alarm time is EEPROM, saving default alarm times. Using following data:");
+      writeValuesToEEPRom();
+    }
+    Serial.printf ("LIGHT: start %02d:%02d, stop: %02d:%02d, Duration: %d minutes\n", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
+    Serial.printf ("MOON:  start %02d:%02d, stop: %02d:%02d, Duration: %d minutes\n", moonStartHour, moonStartMinute, moonStopHour , moonStopMinute, duration);
 }
 
 //RGB FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
@@ -317,10 +308,9 @@ void moonset (){
 // WIFI FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
 void reconnect() {
-  // Loop until we're reconnected
 	int mqttTimeOut = 0;
   while (!client.connected()) {
-    if (mqttTimeOut < 10) {
+    if (mqttTimeOut < 5) {
       Serial.print("Attempting MQTT connection...");
       // Create a random client ID 
       String clientId = "ESP8266Client-";
@@ -328,7 +318,6 @@ void reconnect() {
       // Attempt to connect
       if (client.connect(clientId.c_str())) {
         Serial.println("connected");
-        // Once connected, publish an announcement...
         Serial.println("send wakeupmassege");
         client.publish("homie/aquarium40", "reconnected");
         // ... and resubscribe
@@ -338,8 +327,7 @@ void reconnect() {
       } else {
         Serial.print("failed, rc=");
         Serial.print(client.state());
-        Serial.println(" try again in 5 seconds");
-        // Wait 5 seconds before retrying
+        Serial.println(" try again in 1 seconds");
         delay(1000);
       }
       mqttTimeOut++;
@@ -355,12 +343,10 @@ void reconnect() {
 }
 
 void setup_wifi() {
-  delay(10);
-  // We start by connecting to a WiFi network
+
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-
   display.println("conencting to");
   display.println(ssid);
   display.display(); 
@@ -401,6 +387,120 @@ void setup_wifi() {
 		Serial.println("Started without wifi");
 	}
 
+}
+
+// Display main screens
+
+void showCurrentScreen(){
+  switch (screenNumber) {
+      case 1:
+        // TEMPERATURE
+				display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Temperature");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(2);
+        display.print("IN   ");
+				//display.print(temp.AsFloatDegC(), 1);
+				display.println("C");
+        display.setCursor(0, 36);
+        display.setTextSize(2);
+        display.print("OUT  ");
+				//display.print(temp.AsFloatDegC(), 1);
+				display.println("C");
+				display.display();
+        break;
+      case 2:
+        // AIR & CO2
+        display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Technics");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(2);
+				display.print("CO2: ");
+				display.println("on");
+				display.print("Air: ");
+				display.println("off");
+				display.display();
+        break;
+      case 3:
+        // NETWORK
+				display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Network");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+        display.setTextSize(2);
+				display.print("wifi: ");
+				if (noWifiMode){
+					display.println("--");
+				}
+				else {
+					display.println("ok");
+				}
+        display.setCursor(0, 36);
+        display.setTextSize(2);
+				display.print("mqtt: ");
+				if (mqttServerConnected){
+					display.println("ok");
+				}
+				else {
+					display.println("--");
+				}
+				display.setCursor(0, 57);
+        display.setTextSize(1);
+        display.print("ip: ");
+        display.println(WiFi.localIP());
+				display.display();
+        break;
+      case 4:
+        // LIGHT
+        display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Light");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(1);
+        display.printf("booja: %02d:%02d", sunriseHour, sunriseMinute);
+				display.print("Sunrise:  ");
+				display.println("10:00");
+				display.print("Sunset:   ");
+				display.println("20:00");
+        display.print("Moonrise: ");
+				display.println("22:10");
+				display.print("Moonset:  ");
+				display.println("23:30");
+        display.println("Duration: 15 minutes");
+				display.display();
+        break;
+      case 5:
+        // MOON
+        display.clearDisplay();
+				display.setCursor(0,0);
+				display.setTextSize(1);
+        display.println("Moon");
+        display.drawLine(0,11,display.width()-1,11,WHITE);
+        display.setCursor(0, 17);
+				display.setTextSize(2);
+				display.print("On: ");
+				display.println("10:00");
+				display.print("Off: ");
+				display.println("20:00");
+				display.display();
+        break;
+      default:
+        // statements
+        break;
+    }
+
+		screenNumber++;
+		if (screenNumber > 4) screenNumber = 1;
 }
 
 // MQTT FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
@@ -557,48 +657,28 @@ void setup() {
   Serial.println("Serial started");
 
   // OLED
-  // start display
-	// SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-  }
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) Serial.println(F("SSD1306 allocation failed"));
 
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(2000); // Pause for 2 seconds
-
-  // Clear the buffer
-  display.clearDisplay();
-
-  // Show the display buffer on the screen. You MUST call display() after
-  // drawing commands to make them visible on screen!
-  display.display();
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0, 10);
   // Display static text
-  display.println("Starting ");
+  display.println("Starting..... ");
   display.display(); 
-
 
   // WIFI
   setup_wifi();
+
 	if (noWifiMode == false) {
 		client.setServer(mqtt_server, 1883);
 		client.setCallback(callback);
 
+    // OTA 
 		// Hostname defaults to esp8266-[ChipID]
 		#ifdef HOSTNAME 
 		ArduinoOTA.setHostname(HOSTNAME);
 		#endif
-		// No authentication by default
-		// ArduinoOTA.setPassword("admin");
-
-		// Password can be set with it's md5 value as well
-		// MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-		// ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
 		ArduinoOTA.onStart([]() {
 			String type;
@@ -665,14 +745,11 @@ void setup() {
   {
       if (Rtc.LastError() != 0)
       {
-		// we have a communications error
-		// see https://www.arduino.cc/en/Reference/WireEndTransmission for 
-		// what the number means
-		Serial.print("RTC communications error = ");
-		Serial.println(Rtc.LastError());
-    display.print("RTC communications error = ");
-    display.println(Rtc.LastError());
-    display.display();
+        Serial.print("RTC communications error = ");
+        Serial.println(Rtc.LastError());
+        display.print("RTC communications error = ");
+        display.println(Rtc.LastError());
+        display.display();
       }
       else
       {   
@@ -794,118 +871,7 @@ void loop() {
 
     // display stuff
 
-    switch (screenNumber) {
-      case 1:
-        // TEMPERATURE
-				display.clearDisplay();
-				display.setCursor(0,0);
-				display.setTextSize(1);
-        display.println("Temperature");
-        display.drawLine(0,11,display.width()-1,11,WHITE);
-        display.setCursor(0, 17);
-				display.setTextSize(2);
-        display.print("IN   ");
-				display.print(temp.AsFloatDegC(), 1);
-				display.println("C");
-        display.setCursor(0, 36);
-        display.setTextSize(2);
-        display.print("OUT  ");
-				display.print(temp.AsFloatDegC(), 1);
-				display.println("C");
-				display.display();
-        break;
-      case 2:
-        // AIR & CO2
-        display.clearDisplay();
-				display.setCursor(0,0);
-				display.setTextSize(1);
-        display.println("Technics");
-        display.drawLine(0,11,display.width()-1,11,WHITE);
-        display.setCursor(0, 17);
-				display.setTextSize(2);
-				display.print("CO2: ");
-				display.println("on");
-				display.print("Air: ");
-				display.println("off");
-				display.display();
-        break;
-      case 3:
-        // NETWORK
-				display.clearDisplay();
-				display.setCursor(0,0);
-				display.setTextSize(1);
-        display.println("Network");
-        display.drawLine(0,11,display.width()-1,11,WHITE);
-        display.setCursor(0, 17);
-        display.setTextSize(2);
-				display.print("wifi: ");
-				if (noWifiMode){
-					display.println("--");
-				}
-				else {
-					display.println("ok");
-				}
-        display.setCursor(0, 36);
-        display.setTextSize(2);
-				display.print("mqtt: ");
-				if (mqttServerConnected){
-					display.println("ok");
-				}
-				else {
-					display.println("--");
-				}
-				display.setCursor(0, 57);
-        display.setTextSize(1);
-        display.print("ip: ");
-        display.println(WiFi.localIP());
-				display.display();
-        break;
-      case 4:
-        // AIR & CO2
-        display.clearDisplay();
-				display.setCursor(0,0);
-				display.setTextSize(1);
-        display.println("Light");
-        display.drawLine(0,11,display.width()-1,11,WHITE);
-        display.setCursor(0, 17);
-				display.setTextSize(1);
-        char buffer[20];
-        printf(buffer, "%02d:%02d", sunriseHour, sunriseMinute);
-
-        display.println(buffer);
-				display.print("Sunrise:  ");
-				display.println("10:00");
-				display.print("Sunset:   ");
-				display.println("20:00");
-        display.print("Moonrise: ");
-				display.println("22:10");
-				display.print("Moonset:  ");
-				display.println("23:30");
-        display.println("Duration: 15 minutes");
-				display.display();
-        break;
-      case 5:
-        // AIR & CO2
-        display.clearDisplay();
-				display.setCursor(0,0);
-				display.setTextSize(1);
-        display.println("Moon");
-        display.drawLine(0,11,display.width()-1,11,WHITE);
-        display.setCursor(0, 17);
-				display.setTextSize(2);
-				display.print("On: ");
-				display.println("10:00");
-				display.print("Off: ");
-				display.println("20:00");
-				display.display();
-        break;
-      default:
-        // statements
-        break;
-    }
-
-		screenNumber++;
-		if (screenNumber > 4) screenNumber = 1;
+    showCurrentScreen();
 
 	//// Check sunrise and sunset 
     if (checkTime(now, sunriseHour, sunriseMinute)) {
