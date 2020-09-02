@@ -265,6 +265,13 @@ void setRGB1() {
   }
   pixels.show();
 }
+void setRGB2() {
+  Serial.println("Set strip to full spectrum v2");
+  for( int i = 0 ; i < NUMPIXELS ; i = i++ ) {
+    pixels.setPixelColor( i, 0, 0, 255 );
+  }
+  pixels.show();
+}
 
 void setMoon1() {
 	pixels.clear();
@@ -548,7 +555,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
         setRGB1();
         break;
       case 2:
-        Serial.println("RGB set 2");
+        Serial.println("RGB set 2 - all blue");
+        setRGB2();
         break;
       default:
         // statements
@@ -655,9 +663,11 @@ void setup() {
   while (!Serial); // wait for serial port to connect. Needed for native USB on ESP8266
   delay(5000);
   Serial.println("Serial started");
-
+  delay(1000);
   // OLED
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) Serial.println(F("SSD1306 allocation failed"));
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+  }
 
   display.clearDisplay();
   display.setTextSize(1);
@@ -825,7 +835,7 @@ void setup() {
 	}
 */
 
-  
+  setRGB2();
 }
 
 void loop() {
