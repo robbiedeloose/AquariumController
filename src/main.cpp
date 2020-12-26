@@ -437,10 +437,10 @@ void reconnect() {
       String clientId = "ESP8266Client-";
       clientId += String(random(0xffff), HEX);
       // Attempt to connect
-      if (client.connect(clientId.c_str())) {
+      if (client.connect(clientId.c_str(),"homie/aquarium60/status",2, true,"lost")) {
         Serial.println("connected");
         Serial.println("send wakeupmassege");
-        client.publish("homie/aquarium60/status", "reconnected");
+        client.publish("homie/aquarium60/status", "connecting");
         // ... and resubscribe
         Serial.println("subscribe");
         client.subscribe("homie/aquarium60/#");
@@ -674,7 +674,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
   ////// Direct controll of controllable items /////////////////////////////////////////////
-  // switch main light on/off over mqtt
+  // switch main light on/off over mqtt -- DONE
   if(strcmp(topic, "homie/aquarium60/light/set") == 0){
     int payloadAsInt = atoi ((char*)payload);
     analogWrite(12, map(payloadAsInt, 0, 100, 0, 1023 ));
@@ -726,12 +726,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
         break;
     }
   } 
-  // Switch moonlight on/off over mqtt
+  // Switch moonlight on/off over mqtt -- DONE
   else if(strcmp(topic, "homie/aquarium60/moonlight/set") == 0){
     int payloadAsInt = atoi ((char*)payload);
     if (payloadAsInt == 0){
       Serial.println("Moonlight Off");
-		  client.publish("homie/aquarium60/log","Moonli off");
+		  client.publish("homie/aquarium60/log","Moonlight off");
       clearRGB();
       client.publish("homie/aquarium60/moonlight","0");
     } 
@@ -742,7 +742,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
       client.publish("homie/aquarium60/moonlight","1");  
     }
   } 
-  // Switch co2 on/off over mqtt
+  // Switch co2 on/off over mqtt -- DONE
   else if (strcmp(topic, "homie/aquarium60/co2/set") == 0){
     int payloadAsInt = atoi ((char*)payload);
     if (payloadAsInt == 1) {
@@ -756,7 +756,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
       client.publish("homie/aquarium60/co2", "0");     
     }
   }
-  // Switch air on/off over mqtt
+  // Switch air on/off over mqtt -- DONE
   else if (strcmp(topic, "homie/aquarium60/air/set") == 0){
     int payloadAsInt = atoi ((char*)payload);
     if (payloadAsInt == 1) {
@@ -772,7 +772,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 
   ////// Set new timers and other options ////////////////////////////////////////
-  // set new time over mqtt
+  // set new time over mqtt -- DONE
   else if (strcmp(topic, "homie/aquarium60/time/set") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
 
@@ -792,7 +792,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sprintf(sendBuffer, "%02d:%02d\n", hour, minute);
     client.publish("homie/aquarium60/time", sendBuffer);
   }
-  // set new sunrise time over mqtt
+  // set new sunrise time over mqtt -- DONE
   else if (strcmp(topic, "homie/aquarium60/sunrise/set") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
 
@@ -813,7 +813,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sprintf(sendBuffer, "%02d:%02d\n", sunriseHour, sunriseMinute);
     client.publish("homie/aquarium60/sunrise", sendBuffer);
   }
-  // set new sunset time over mqtt
+  // set new sunset time over mqtt -- DONE
   else if (strcmp(topic, "homie/aquarium60/sunset/set") == 0) {
     char * strtokIndx; 
 
@@ -833,7 +833,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sprintf(sendBuffer, "%02d:%02d\n", sunsetHour, sunsetMinute);
     client.publish("homie/aquarium60/sunset", sendBuffer); 
   }
-  // set new moonrise time over mqtt
+  // set new moonrise time over mqtt  -- DONE
   else if (strcmp(topic, "homie/aquarium60/moonrise/set") == 0) {
     char * strtokIndx; // this is used by strtok() as an index
 
@@ -854,7 +854,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sprintf(sendBuffer, "%02d:%02d\n", moonriseHour, moonriseMinute);
     client.publish("homie/aquarium60/moonrise", sendBuffer);
   }
-  // set new moonset time over mqtt
+  // set new moonset time over mqtt -- DONE
   else if (strcmp(topic, "homie/aquarium60/moonset/set") == 0) {
     char * strtokIndx; 
 
@@ -874,7 +874,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sprintf(sendBuffer, "%02d:%02d\n", moonsetHour, moonsetMinute);
     client.publish("homie/aquarium60/moonset", sendBuffer);
   }
-  // Set new sunrise and sunset duration
+  // Set new sunrise and sunset duration -- DONE
   else if (strcmp(topic, "homie/aquarium60/duration/set") == 0) {
     duration = atoi ((char*)payload);
 
@@ -1178,6 +1178,8 @@ void loop() {
   if (millis() > time_now + period) {
 		time_now = millis();
 
+    client.publish("homie/aquarium60/status", "ready");
+
 		if (!Rtc.IsDateTimeValid()) 
     {
         if (Rtc.LastError() != 0)
@@ -1260,7 +1262,6 @@ void loop() {
     sprintf(tempBuffer, "%f\n", waterTemp);
     client.publish("homie/aquarium60/watertemperature", tempBuffer);
      //// ----- Status : starting ////
-    client.publish("homie/aquarium60/status", "ready");
     }
   }
 }
