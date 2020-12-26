@@ -441,6 +441,7 @@ void reconnect() {
         Serial.println("connected");
         Serial.println("send wakeupmassege");
         client.publish("homie/aquarium60/status", "connecting");
+        client.publish("homie/aquarium60/log", "reconnected");
         // ... and resubscribe
         Serial.println("subscribe");
         client.subscribe("homie/aquarium60/#");
@@ -737,7 +738,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     } 
     else if (payloadAsInt == 1) {
       Serial.println("Moonlight On");
-		  client.publish("homie/aquarium60/log","Moon on");
+		  client.publish("homie/aquarium60/log","Moonlight on");
       setMoon1();
       client.publish("homie/aquarium60/moonlight","1");  
     }
@@ -887,6 +888,47 @@ void callback(char* topic, byte* payload, unsigned int length) {
     sprintf(sendBuffer, "%d\n", duration);
     client.publish("homie/aquarium60/duration", sendBuffer);
   } 
+
+  // set new air start time over mqtt -- DONE
+  else if (strcmp(topic, "homie/aquarium60/airstarttime/set") == 0) {
+    char * strtokIndx; 
+
+    strtokIndx = strtok((char*)payload,":");  
+    moonsetHour = atoi(strtokIndx); 
+    strtokIndx = strtok(NULL, ":");
+    moonsetMinute = atoi(strtokIndx);     
+
+    EEPROM.begin(512);
+    EEPROM.write(8, airStartHour);
+		EEPROM.write(9, airStartMinute);
+		EEPROM.commit();
+		EEPROM.end();
+
+    Serial.printf ("New air start time: %02d:%02d", airStartHour, airStartMinute);
+		Serial.println();  
+    sprintf(sendBuffer, "%02d:%02d\n", airStartHour, airStartMinute);
+    client.publish("homie/aquarium60/airstarttime", sendBuffer);
+  }
+  // set new air stop time over mqtt -- DONE
+  else if (strcmp(topic, "homie/aquarium60/airstoptime/set") == 0) {
+    char * strtokIndx; 
+
+    strtokIndx = strtok((char*)payload,":");  
+    moonsetHour = atoi(strtokIndx); 
+    strtokIndx = strtok(NULL, ":");
+    moonsetMinute = atoi(strtokIndx);     
+
+    EEPROM.begin(512);
+    EEPROM.write(8, airStopHour);
+		EEPROM.write(9, airStopMinute);
+		EEPROM.commit();
+		EEPROM.end();
+
+    Serial.printf ("New air stop time: %02d:%02d", airStopHour, airStopMinute);
+		Serial.println();  
+    sprintf(sendBuffer, "%02d:%02d\n", airStopHour, airStopMinute);
+    client.publish("homie/aquarium60/airstoptime", sendBuffer);
+  }
 
   // reset EEPRom to default values -- DONE
   else if (strcmp(topic, "homie/aquarium60/reseteeprom") == 0) {
@@ -1229,20 +1271,24 @@ void loop() {
     if (checkTime(now, sunriseHour - 2, sunriseMinute)) {
       co2 = true;
       digitalWrite(PIN_RELAY_CO2, HIGH);
+      client.publish("homie/aquarium60/co2", "1");
     }
     if (checkTime(now, sunsetHour - 2, sunsetMinute)) {
       co2 = false;
       digitalWrite(PIN_RELAY_CO2, LOW);
+      client.publish("homie/aquarium60/co2", "0");
     }
 
     //// check AIR
     if (checkTime(now, airStartHour, sunriseMinute)) {
       air = true;
       digitalWrite(PIN_RELAY_AIR, HIGH);
+      client.publish("homie/aquarium60/air", "1");
     }
     if (checkTime(now, sunsetHour, sunsetMinute)) {
       air = false;
       digitalWrite(PIN_RELAY_AIR, LOW);
+      client.publish("homie/aquarium60/air", "0");
     }
     //// Check temperature
     Serial.print("Requesting temperatures...");
