@@ -329,6 +329,14 @@ void setRGB5() {
   pixels.show();
 }
 
+void setMoon() {
+	pixels.clear();
+  for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
+      pixels.setPixelColor( i, 0, 0, 100 );
+   }  
+   pixels.show();
+}
+
 void setMoon1() {
 	pixels.clear();
   for( int i = 2 ; i < NUMPIXELS / 2 ; i = i + 3 ) {
@@ -414,6 +422,7 @@ void moonrise (){
     pixels.show();
     delay(waitRGB);
   }
+  client.publish("homie/aquarium60/moonlight", "1");
 } 
 
 void moonset (){
@@ -424,6 +433,7 @@ void moonset (){
     pixels.show();
     delay(waitRGB);
   }
+  client.publish("homie/aquarium60/moonlight", "0");
 }
 
 // WIFI FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
@@ -733,14 +743,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (payloadAsInt == 0){
       Serial.println("Moonlight Off");
 		  client.publish("homie/aquarium60/log","Moonlight off");
-      clearRGB();
       client.publish("homie/aquarium60/moonlight","0");
+      clearRGB();
     } 
     else if (payloadAsInt == 1) {
       Serial.println("Moonlight On");
 		  client.publish("homie/aquarium60/log","Moonlight on");
-      setMoon1();
       client.publish("homie/aquarium60/moonlight","1");  
+      setMoon();
     }
   } 
   // Switch co2 on/off over mqtt -- DONE
@@ -1266,7 +1276,16 @@ void loop() {
     }
     Serial.print("Daylight: ");
     Serial.println(daylight);
-    
+  
+    //// Check moonrise and moonset
+      if (checkTime(now, moonriseHour, moonriseMinute)) {
+      moonrise();
+
+    }
+    if (checkTime(now, moonsetHour, moonsetMinute)) {
+      moonset();
+    }
+  
     //// check CO2
     if (checkTime(now, sunriseHour - 2, sunriseMinute)) {
       co2 = true;
