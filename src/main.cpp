@@ -56,6 +56,7 @@ DallasTemperature sensors(&oneWire);
 DeviceAddress insideThermometer;
 float waterTemp;
 float tempOffset = -1;
+
 // RTC
 #include <Wire.h> // must be included here so that Arduino library object file references work
 #include <RtcDS3231.h>
@@ -233,7 +234,7 @@ void startEEPRom () {
     Serial.printf ("LIGHT: start %02d:%02d, stop: %02d:%02d, Duration: %d minutes\n", sunriseHour, sunriseMinute, sunsetHour , sunsetMinute, duration);
     Serial.printf ("MOON:  start %02d:%02d, stop: %02d:%02d, Duration: %d minutes\n", moonriseHour, moonriseMinute, moonsetHour , moonsetMinute, duration);
 }
-
+// DONE
 void resetEEPRom () {
   EEPROM.begin(512);
   EEPROM.write(0, 0);
@@ -241,54 +242,33 @@ void resetEEPRom () {
 	EEPROM.end();
   ESP.restart();
 }
+// DONE
+void restartDevice() {
+    ESP.restart();
+}
 
 //RGB FUNCTIONS /////////////////////////////////////////////////////////////////////////////////////////////
-
-void sunrise() {
-  Serial.println("Start Sunrise animation");
-  for(int i = 0 ; i<255;i++){
-    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
-    pixels.show(); 
-    delay(waitRGB);
-  }
-  for(int i = 0; i<1024;i++){
-    analogWrite(12, i);
-    delay(waitWhite);
-  }
-     for(int i = 255 ; i>=0 ; i--){
-    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
-    pixels.show(); 
-    delay(waitRGB);
-  }
-  Serial.println("Stop Sunrise animation");
-  client.publish("homie/aquarium60/light", "100");
-}
-
-void sunset() {
-  Serial.println("Start Sunset animation");
-  for( int i = 0 ; i<255;i++ ){
-    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
-    pixels.show(); 
-    delay(waitRGB);
-  }
-  for( int i = 1024; i>=0;i-- ){
-    analogWrite(12, i);
-    delay(waitWhite);
-  }
-   for( int i = 255 ; i>=0 ; i-- ){
-    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
-    pixels.show(); 
-    delay(waitRGB);
-  }
-  Serial.println("Stop Sunset animation");
-    client.publish("homie/aquarium60/light", "0");
-}
 
 void clearRGB() {
   pixels.clear();
   pixels.show();
 }
-
+// set RGB -  needs to be changed so it picks the default RGB theme
+void setRGB() {
+  Serial.println("Set strip to full spectrum v1");
+  for( int i = 0 ; i < NUMPIXELS ; i = i + 3 ) {
+    pixels.setPixelColor( i, 255, 0, 0 );
+  }
+   for( int i = 1 ; i < NUMPIXELS ; i = i + 3 ) {
+    pixels.setPixelColor( i, 0, 255, 0 );
+  }
+   for( int i = 2 ; i < NUMPIXELS ; i = i + 3 ) {
+    pixels.setPixelColor( i, 0, 0, 255 );
+  }
+  pixels.setBrightness(255);
+  pixels.show();
+}
+// needs to go
 void setRGB1() {
   Serial.println("Set strip to full spectrum v1");
   for( int i = 0 ; i < NUMPIXELS ; i = i + 3 ) {
@@ -303,6 +283,7 @@ void setRGB1() {
   pixels.setBrightness(255);
   pixels.show();
 }
+// needs to go
 void setRGB2() {
   Serial.println("Set strip to full spectrum v2");
   for( int i = 0 ; i < NUMPIXELS ; i++ ) {
@@ -311,6 +292,7 @@ void setRGB2() {
   pixels.setBrightness(255);
   pixels.show();
 }
+// needs to go
 void setRGB3() {
   Serial.println("Set strip to full spectrum v2");
   for( int i = 0 ; i < NUMPIXELS ; i++ ) {
@@ -319,6 +301,7 @@ void setRGB3() {
   pixels.setBrightness(255);
   pixels.show();
 }
+// needs to go
 void setRGB4() {
   Serial.println("Set strip to full spectrum v2");
   for( int i = 0 ; i < NUMPIXELS ; i++ ) {
@@ -327,6 +310,7 @@ void setRGB4() {
   pixels.setBrightness(255);
   pixels.show();
 }
+// needs to go
 void setRGB5() {
   Serial.println("Set strip to full spectrum v2");
   for( int i = 0 ; i < NUMPIXELS ; i = i + 3 ) {
@@ -380,6 +364,46 @@ void setMoon4() {
     	pixels.setPixelColor( i, 20, 20, 20 );
    	}  
    	pixels.show();
+}
+
+void sunrise() {
+  Serial.println("Start Sunrise animation");
+  for(int i = 0 ; i<255;i++){
+    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
+    pixels.show(); 
+    delay(waitRGB);
+  }
+  for(int i = 0; i<1024;i++){
+    analogWrite(12, i);
+    delay(waitWhite);
+  }
+     for(int i = 255 ; i>=0 ; i--){
+    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
+    pixels.show(); 
+    delay(waitRGB);
+  }
+  Serial.println("Stop Sunrise animation");
+  client.publish("homie/aquarium60/light", "100");
+}
+
+void sunset() {
+  Serial.println("Start Sunset animation");
+  for( int i = 0 ; i<255;i++ ){
+    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
+    pixels.show(); 
+    delay(waitRGB);
+  }
+  for( int i = 1024; i>=0;i-- ){
+    analogWrite(12, i);
+    delay(waitWhite);
+  }
+   for( int i = 255 ; i>=0 ; i-- ){
+    pixels.fill(pixels.Color(i,0,0),0, NUMPIXELS);
+    pixels.show(); 
+    delay(waitRGB);
+  }
+  Serial.println("Stop Sunset animation");
+    client.publish("homie/aquarium60/light", "0");
 }
 
 void moonrise (){
@@ -626,6 +650,12 @@ void mqttSendInfo () {
     
     sprintf(tempBuffer, "%02d\n", duration);
     client.publish("homie/aquarium60/duration", tempBuffer);
+
+    sprintf(tempBuffer, "%02d:%02d\n", airStartHour, airStartMinute);
+    client.publish("homie/aquarium60/airstarttime", tempBuffer);
+
+    sprintf(tempBuffer, "%02d:%02d\n", airStopHour, airStopMinute);
+    client.publish("homie/aquarium60/airstoptime", tempBuffer);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -648,6 +678,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if(strcmp(topic, "homie/aquarium60/light/set") == 0){
     int payloadAsInt = atoi ((char*)payload);
     analogWrite(12, map(payloadAsInt, 0, 100, 0, 1023 ));
+    if (payloadAsInt >= 30){
+      setRGB();
+    }
+    else {
+      clearRGB();
+    }
     Serial.printf ("Main light at %d percent", payloadAsInt);
     sprintf(sendBuffer, "%d\n", payloadAsInt);
     client.publish("homie/aquarium60/light", sendBuffer);
@@ -852,31 +888,47 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("homie/aquarium60/duration", sendBuffer);
   } 
 
-  // reset EEPRom to default values
+  // reset EEPRom to default values -- DONE
   else if (strcmp(topic, "homie/aquarium60/reseteeprom") == 0) {
+    client.publish("homie/aquarium60/log", "Eeprom reset requested");
     resetEEPRom();
+  }
+  // restart device -- DONE
+  else if (strcmp(topic, "homie/aquarium60/restart") == 0) {
+    client.publish("homie/aquarium60/log", "Device restart requested");
+    restartDevice();
   }
 
   // Reqest and send information about this node /////////////////////////////////
-  // Request Ip from this controller
-  else if(strcmp(topic, "homie/aquarium60/requestip") == 0){
-    char tempBuffer[20] = "";
-    sprintf(tempBuffer, "IP: %s\n", WiFi.localIP().toString().c_str());
-    client.publish("homie/aquarium60/ip", tempBuffer);
-  }
-  // Request all info from this controller
+  // Request all info from this controller -- done
   else if(strcmp(topic, "homie/aquarium60/requestinfo") == 0){
     mqttSendInfo();
   }
   ////// Run actions through mqtt ////////////////////////////////////////////////
-  // Simulate sunrise
+  // Simulate sunrise - DONE
   else if(strcmp(topic, "homie/aquarium60/dosunrise") == 0){
-    sunrise();
-    setRGB1();
+    if (daylight == false) {
+      client.publish("homie/aquarium60/log", "sunrise started");
+      sunrise();
+      setRGB();
+      daylight = true;
+      client.publish("homie/aquarium60/log", "sunrise finished");
+    }
+    else {
+      client.publish("homie/aquarium60/log", "sun is allready up");
+    }
   }
-    // Simulate sunset
+    // Simulate sunset - DONE
   else if(strcmp(topic, "homie/aquarium60/dosunset") == 0){
-    sunset();
+    if (daylight == true) {
+      client.publish("homie/aquarium60/log", "sunset started");
+      sunset();
+      daylight = false;
+      client.publish("homie/aquarium60/log", "sunset finished");
+    }
+    else {
+      client.publish("homie/aquarium60/log", "sun is allready down");
+    }
   }
 }
 
