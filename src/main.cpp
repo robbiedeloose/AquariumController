@@ -426,7 +426,7 @@ void moonrise (){
 } 
 
 void moonset (){
-  for(int j = 255; j < moonBrightness ; j--){
+  for(int j = 255; j > moonBrightness ; j--){
     for( int i = 2 ; i < NUMPIXELS ; i = i + 3 ) {
       pixels.setPixelColor( i, 0, 0, j );
     }  
@@ -981,6 +981,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
     else {
       client.publish("homie/aquarium60/log", "sun is allready down");
     }
+  }
+  else if(strcmp(topic, "homie/aquarium60/domoonrise") == 0){
+    client.publish("homie/aquarium60/log", "moonrise started");
+    moonrise();
+    client.publish("homie/aquarium60/log", "moonrise finished");
+    client.publish("homie/aquarium60/moonlight", "1");
+  }
+  else if(strcmp(topic, "homie/aquarium60/domoonset") == 0){
+    client.publish("homie/aquarium60/log", "moonset started");
+    moonset();
+    client.publish("homie/aquarium60/log", "moonset finished");
+    client.publish("homie/aquarium60/moonlight", "0");
   }
 }
 
