@@ -429,7 +429,7 @@ void moonrise (){
 } 
 
 void moonset (){
-  for(int j = 255; j > moonBrightness ; j--){
+  for(int j = moonBrightness; j > 0 ; j--){
     for( int i = 2 ; i < NUMPIXELS ; i = i + 3 ) {
       pixels.setPixelColor( i, 0, 0, j );
     }  
