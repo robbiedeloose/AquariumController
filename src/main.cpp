@@ -32,6 +32,7 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(50)
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
+bool firstLoop = true;
 
 // PINS
 #define PIN_PUMP1 0
@@ -87,8 +88,10 @@ int pump1Dosage = 10; // 10 ml check and calculate running time
 int pump1RunDays[7] = {1,0,0,0,0,0,0}; // mo, tue, wen, thu, fri, sa, su
 
 // Millis
-int period = 5000;
-unsigned long time_now = 0;
+int mainInterval = 5000;
+int tempInterval = 60000;
+unsigned long lastMainInterval = 0;
+unsigned long lastTempInterval = 0;
 
 // EEPROM
 #include <EEPROM.h>
@@ -1231,6 +1234,11 @@ void setup() {
 
 void loop() {
   
+  if (firstLoop) {
+    client.publish("homie/aquarium60/status", "ready");
+    firstLoop = false;
+  }
+
 	if (noWifiMode == false) {
 		if (!client.connected()) {
 			reconnect();
@@ -1239,10 +1247,8 @@ void loop() {
 		ArduinoOTA.handle();
 	}
 
-  if (millis() > time_now + period) {
-		time_now = millis();
-
-    client.publish("homie/aquarium60/status", "ready");
+  if (millis() > lastMainInterval + mainInterval) {
+		lastMainInterval = millis();
 
 		if (!Rtc.IsDateTimeValid()) 
     {
@@ -1321,11 +1327,16 @@ void loop() {
       digitalWrite(PIN_RELAY_AIR, LOW);
       client.publish("homie/aquarium60/air", "0");
     }
+  }
+  if (millis() > lastTempInterval + mainInterval) {
+		lastTempInterval = millis();
+    
     //// Check temperature
     Serial.print("Requesting temperatures...");
     sensors.requestTemperatures(); // Send the command to get temperatures
     printTemperature(insideThermometer); // Use a simple function to print out the data
     waterTemp = sensors.getTempC(insideThermometer);
+    
     if(waterTemp == DEVICE_DISCONNECTED_C) 
     {
       Serial.println("Error: Could not read temperature data");
@@ -1338,7 +1349,6 @@ void loop() {
     char tempBuffer[20] = "";
     sprintf(tempBuffer, "%f\n", waterTemp);
     client.publish("homie/aquarium60/watertemperature", tempBuffer);
-     //// ----- Status : starting ////
     }
   }
 }
