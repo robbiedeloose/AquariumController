@@ -56,7 +56,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 DeviceAddress insideThermometer;
 float waterTemp;
-float tempOffset = -1;
+float tempOffset = 0;
 
 // RTC
 #include <Wire.h> // must be included here so that Arduino library object file references work
@@ -453,7 +453,7 @@ void reconnect() {
       if (client.connect(clientId.c_str(),"homie/aquarium60/status",2, true,"lost")) {
         Serial.println("connected");
         Serial.println("send wakeupmassege");
-        client.publish("homie/aquarium60/status", "connecting");
+        client.publish("homie/aquarium60/status", "reconnected");
         client.publish("homie/aquarium60/log", "reconnected");
         // ... and resubscribe
         Serial.println("subscribe");
@@ -1233,19 +1233,15 @@ void setup() {
 }
 
 void loop() {
-  
-  if (firstLoop) {
-    client.publish("homie/aquarium60/status", "ready");
-    firstLoop = false;
-  }
 
 	if (noWifiMode == false) {
 		if (!client.connected()) {
 			reconnect();
+      client.publish("homie/aquarium60/status", "ready");
 		}
 		client.loop();
 		ArduinoOTA.handle();
-	}
+  }
 
   if (millis() > lastMainInterval + mainInterval) {
 		lastMainInterval = millis();
